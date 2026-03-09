@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2C2C2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Attendance">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Employee Attendance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1C1C1E;
+    --surface: #2C2C2E;
+    --surface2: #3A3A3C;
+    --surface3: #48484A;
+    --border: #545456;
+    --text: #FFFFFF;
+    --text2: #EBEBF5CC;
+    --text3: #EBEBF599;
+    --accent: #FF9F0A;
+    --accent2: #30D158;
+    --accent3: #0A84FF;
+    --accent4: #FF375F;
+    --safe-top: env(safe-area-inset-top, 44px);
+    --safe-bottom: env(safe-area-inset-bottom, 34px);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Sarabun', 'Plus Jakarta Sans', sans-serif; overscroll-behavior: none; }
+  
+  /* App Shell */
+  #app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* Header */
+  .header {
+    background: rgba(44,44,46,0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: calc(var(--safe-top) + 8px) 16px 14px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .header-title { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
+  .header-period { font-size: 12px; color: var(--text3); margin-top: 2px; font-family: 'Sarabun', sans-serif; }
+  .sync-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 14px; border-radius: 20px;
+    font-size: 13px; font-family: 'Sarabun', sans-serif; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .sync-btn:active { transform: scale(0.95); background: var(--surface3); }
+  .sync-btn.syncing .sync-icon { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  
+  /* Stats row */
+  .stats-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .stats-row::-webkit-scrollbar { display: none; }
+  .stat-chip {
+    background: var(--surface2); border-radius: 12px; padding: 8px 14px;
+    display: flex; flex-direction: column; align-items: center; min-width: 90px; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .stat-label { font-size: 10px; color: var(--text3); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+  .stat-value { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 18px; margin-top: 2px; }
+  .stat-value.green { color: var(--accent2); }
+  .stat-value.orange { color: var(--accent); }
+  .stat-value.blue { color: var(--accent3); }
+
+  /* Search */
+  .search-wrap { padding: 12px 16px 8px; }
+  .search-input {
+    width: 100%; background: var(--surface2); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 10px 14px 10px 38px; color: var(--text);
+    font-size: 15px; font-family: 'Sarabun', sans-serif; outline: none;
+    position: relative;
+  }
+  .search-wrap { position: relative; }
+  .search-icon { position: absolute; left: 28px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
+
+  /* Grid */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 4px 16px 100px; }
+  
+  /* Employee Card */
+  .emp-card {
+    background: var(--surface); border-radius: 16px; padding: 14px 10px 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    cursor: pointer; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.05);
+    position: relative; overflow: hidden;
+  }
+  .emp-card:active { transform: scale(0.94); background: var(--surface2); }
+  .emp-card::before {
+    content: ''; position: absolute; inset: 0; opacity: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.1), transparent 70%);
+    transition: opacity 0.3s;
+  }
+  .emp-card:active::before { opacity: 1; }
+  
+  .avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800;
+    font-size: 18px; color: #fff; letter-spacing: -1px; flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .emp-name {
+    font-size: 12px; font-weight: 600; text-align: center; line-height: 1.3;
+    color: var(--text); word-break: break-word; font-family: 'Sarabun', sans-serif;
+  }
+  .emp-badges { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+  .badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 8px;
+    font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif;
+    display: flex; align-items: center; gap: 2px;
+  }
+  .badge-day { background: rgba(48,209,88,0.2); color: var(--accent2); }
+  .badge-ot { background: rgba(255,159,10,0.2); color: var(--accent); }
+
+  /* Loading/Error state */
+  .state-msg {
+    grid-column: 1/-1; text-align: center; padding: 60px 20px;
+    color: var(--text3); font-size: 15px; display: flex; flex-direction: column;
+    align-items: center; gap: 12px;
+  }
+  .state-msg .icon { font-size: 48px; }
+
+  /* Bottom Sheet Overlay */
+  .bs-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 200; opacity: 0; pointer-events: none;
+    transition: opacity 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+  .bs-overlay.open { opacity: 1; pointer-events: all; }
+
+  /* Bottom Sheet */
+  .bottom-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: var(--surface); border-radius: 24px 24px 0 0;
+    z-index: 201; max-height: 92vh; display: flex; flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.45s cubic-bezier(0.32,0.72,0,1);
+    box-shadow: 0 -8px 60px rgba(0,0,0,0.6);
+  }
+  .bottom-sheet.open { transform: translateY(0); }
+  
+  .bs-handle { width: 36px; height: 4px; background: var(--surface3); border-radius: 2px; margin: 10px auto 0; flex-shrink: 0; }
+  .bs-scroll { overflow-y: auto; flex: 1; overscroll-behavior: contain; padding-bottom: calc(var(--safe-bottom) + 20px); }
+  .bs-scroll::-webkit-scrollbar { display: none; }
+  
+  /* BS Header */
+  .bs-header { padding: 16px 20px 20px; display: flex; align-items: center; gap: 14px; }
+  .bs-avatar { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 22px; color: #fff; flex-shrink: 0; box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+  .bs-name { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 20px; }
+  .bs-period { font-size: 13px; color: var(--text3); margin-top: 2px; }
+  .bs-close { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); border: none; color: var(--text3); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* Summary Chips */
+  .summary-chips { display: flex; gap: 8px; padding: 0 20px 20px; overflow-x: auto; scrollbar-width: none; }
+  .summary-chips::-webkit-scrollbar { display: none; }
+  .chip {
+    background: var(--surface2); border-radius: 14px; padding: 10px 16px;
+    display: flex; flex-direction: column; align-items: center; min-width: 90px; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .chip-icon { font-size: 18px; margin-bottom: 2px; }
+  .chip-val { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 16px; }
+  .chip-label { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .chip-val.green { color: var(--accent2); }
+  .chip-val.orange { color: var(--accent); }
+  .chip-val.blue { color: var(--accent3); }
+
+  /* Calendar */
+  .section { padding: 0 20px 16px; }
+  .section-title { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; color: var(--text2); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-month { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 16px; }
+  .cal-arrow { background: var(--surface2); border: none; color: var(--text); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+  .cal-arrow:active { background: var(--surface3); }
+  .cal-arrow:disabled { opacity: 0.3; cursor: default; }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-dow { font-size: 10px; color: var(--text3); text-align: center; padding: 4px 0; font-weight: 600; }
+  .cal-day {
+    aspect-ratio: 1; border-radius: 50%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-size: 13px; font-weight: 500;
+    position: relative; cursor: default; transition: background 0.15s;
+  }
+  .cal-day.worked { background: rgba(48,209,88,0.25); color: var(--accent2); font-weight: 700; }
+  .cal-day.has-ot { background: rgba(255,159,10,0.2); color: var(--accent); font-weight: 700; }
+  .cal-day.worked.has-ot { background: linear-gradient(135deg, rgba(48,209,88,0.3), rgba(255,159,10,0.3)); color: #fff; }
+  .cal-day.today-mark { outline: 2px solid var(--accent3); outline-offset: -2px; }
+  .cal-day.empty { opacity: 0; pointer-events: none; }
+  .cal-dot { width: 4px; height: 4px; border-radius: 50%; position: absolute; bottom: 2px; }
+
+  /* Day swipe wrapper */
+  .cal-swipe { overflow: hidden; touch-action: pan-y; user-select: none; }
+
+  /* Daily Log */
+  .log-list { display: flex; flex-direction: column; gap: 8px; }
+  .log-item {
+    background: var(--surface2); border-radius: 14px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .log-date { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 22px; color: var(--accent3); min-width: 32px; text-align: center; line-height: 1; }
+  .log-info { flex: 1; }
+  .log-day-label { font-size: 13px; font-weight: 600; }
+  .log-ot { font-size: 12px; color: var(--accent); margin-top: 2px; }
+  .log-badge { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .log-badge.work { background: rgba(48,209,88,0.2); color: var(--accent2); }
+  .log-badge.half { background: rgba(10,132,255,0.2); color: var(--accent3); }
+  .log-badge.ot-only { background: rgba(255,159,10,0.2); color: var(--accent); }
+
+  /* Pay Breakdown */
+  .pay-box { background: var(--surface2); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.06); }
+  .pay-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+  .pay-row + .pay-row { border-top: 1px solid rgba(255,255,255,0.05); }
+  .pay-label { font-size: 14px; color: var(--text2); }
+  .pay-val { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 15px; }
+  .pay-total { background: linear-gradient(135deg, rgba(48,209,88,0.15), rgba(10,132,255,0.1)); border-radius: 12px; padding: 14px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(48,209,88,0.2); }
+  .pay-total .pay-label { font-weight: 700; font-size: 15px; color: var(--text); }
+  .pay-total .pay-val { font-size: 20px; color: var(--accent2); }
+
+  /* URL Config */
+  .url-banner {
+    background: rgba(255,159,10,0.1); border: 1px solid rgba(255,159,10,0.3);
+    border-radius: 14px; padding: 12px 16px; margin: 0 16px 12px; display: flex; align-items: center; gap: 10px;
+  }
+  .url-input {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 12px; color: var(--text);
+    font-size: 13px; font-family: 'Sarabun', sans-serif; outline: none; width: 100%;
+    margin-top: 8px;
+  }
+  .btn-small {
+    background: var(--accent3); color: #fff; border: none; border-radius: 10px;
+    padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: 'Sarabun', sans-serif;
+    font-weight: 600; white-space: nowrap; transition: opacity 0.2s;
+  }
+  .btn-small:active { opacity: 0.8; }
+  .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 0 20px 16px; }
+
+  /* Swipe animation */
+  .cal-inner { transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s; }
+  .cal-inner.slide-left { transform: translateX(-30px); opacity: 0; }
+  .cal-inner.slide-right { transform: translateX(30px); opacity: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="header-title">📋 Attendance</div>
+        <div class="header-period" id="headerPeriod">—</div>
+      </div>
+      <button class="sync-btn" onclick="syncData()">
+        <span class="sync-icon" style="display:inline-block">↻</span>
+        <span>Sync</span>
+      </button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-chip">
+        <div class="stat-label">พนักงานทั้งหมด</div>
+        <div class="stat-value blue" id="statEmp">—</div>
+      </div>
+      <div class="stat-chip" style="min-width:130px">
+        <div class="stat-label">รวมจ่าย</div>
+        <div class="stat-value green" id="statTotal">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" type="search" placeholder="ค้นหาพนักงาน..." id="searchInput" oninput="filterCards()">
+  </div>
+
+  <div id="urlBanner" class="url-banner" style="display:none">
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:600;color:var(--accent)">⚙️ ตั้งค่า Apps Script URL</div>
+      <input class="url-input" id="urlInput" placeholder="https://script.google.com/macros/s/.../exec" type="url">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-small" onclick="saveUrl()">บันทึก</button>
+        <button class="btn-small" style="background:var(--surface3);color:var(--text3)" onclick="loadDemo()">ใช้ Demo</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid" id="empGrid">
+    <div class="state-msg">
+      <div class="icon">⏳</div>
+      <div>กำลังโหลดข้อมูล...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Sheet -->
+<div class="bs-overlay" id="bsOverlay" onclick="closeSheet()"></div>
+<div class="bottom-sheet" id="bottomSheet">
+  <div class="bs-handle"></div>
+  <div class="bs-scroll" id="bsScroll">
+    <div class="bs-header">
+      <div class="bs-avatar" id="bsAvatar"></div>
+      <div>
+        <div class="bs-name" id="bsName"></div>
+        <div class="bs-period" id="bsPeriod"></div>
+      </div>
+      <button class="bs-close" onclick="closeSheet()">✕</button>
+    </div>
+    <div class="summary-chips" id="bsChips"></div>
+    <div class="divider"></div>
+    <!-- Calendar -->
+    <div class="section">
+      <div class="section-title">📅 ปฏิทิน</div>
+      <div class="cal-nav">
+        <button class="cal-arrow" id="calPrev" onclick="changeCalMonth(-1)">‹</button>
+        <div class="cal-month" id="calMonthLabel"></div>
+        <button class="cal-arrow" id="calNext" onclick="changeCalMonth(1)">›</button>
+      </div>
+      <div class="cal-swipe" id="calSwipe">
+        <div class="cal-inner" id="calInner">
+          <div class="cal-grid" id="calDow"></div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <!-- Daily Log -->
+    <div class="section">
+      <div class="section-title">📝 บันทึกรายวัน</div>
+      <div class="log-list" id="logList"></div>
+    </div>
+    <div class="divider"></div>
+    <!-- Pay breakdown -->
+    <div class="section">
+      <div class="section-title">💰 รายละเอียดค่าจ้าง</div>
+      <div id="payBreakdown"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== CONFIG =====
+const STORAGE_KEY = 'attendance_script_url';
+const DEMO_DATA = {
+  period: "ก.พ. 28-มี.ค.9",
+  days: [27, 28, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  employees: [
+    { id: 1, name: "พี่มหา", dayRate: 300, otRate: 50,
+      dayWork: [0,1,0,1,0,1,1,1,0,0,1], otHours: [0,0,0,0,0,1,2,1,0,0,0] },
+    { id: 2, name: "ลุงทัย", dayRate: 300, otRate: 50,
+      dayWork: [0,1,0,1,0,1,1,1,1,0,1], otHours: [2,0,0,0,0,1,2,1,1,0,0] },
+    { id: 3, name: "ป้าอ่อย", dayRate: 300, otRate: 50,
+      dayWork: [0,1,0,1,1,1,1,1,1,0,1], otHours: [0,0,0,0,1,1,2,1,1,0,0] },
+    { id: 4, name: "ป้าแอ้ว", dayRate: 300, otRate: 50,
+      dayWork: [0,1,0,1,1,0,0.5,0,1,0,1], otHours: [0,2,1.5,1,1,0,2,0,1,0,0] },
+    { id: 5, name: "ป้าอร", dayRate: 300, otRate: 50,
+      dayWork: [0,1,0,1,1,1,1,1,1,0,0.5], otHours: [2,2,1.5,0,1,1,1,1,1,0,0] },
+    { id: 6, name: "พี่หนู", dayRate: 300, otRate: 50,
+      dayWork: [0,1,0,1,1,1,1,1,0,0,0.5], otHours: [2,0,1.5,1,0,1,1,1,0,0,1] },
+    { id: 7, name: "น้องปลา", dayRate: 300, otRate: 50,
+      dayWork: [0,0,0,1,0.5,1,0.5,1,0,0,0.5], otHours: [0,0,0,0,0,1,0,1,0,0,0] },
+    { id: 8, name: "ลุงฮอง", dayRate: 500, otRate: 83,
+      dayWork: [0,1,0,1,1,1,0,1,0,0,0], otHours: [0,0,0,0,0,0,0,0,0,0,0] },
+    { id: 9, name: "ป้านวล", dayRate: 300, otRate: 50,
+      dayWork: [0,1,0,1,1,1,0,1,0,0,0], otHours: [0,0,0,0,0,0,0,0,0,0,0] },
+  ]
+};
+
+let appData = null;
+let currentEmp = null;
+let calYear = 0, calMonth = 0; // 0-indexed month
+let allEmployees = [];
+
+// Avatar colors
+const COLORS = ['#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD','#98D8C8','#F7DC6F','#BB8FCE','#85C1E9','#82E0AA','#F1948A'];
+
+function getInitials(name) {
+  name = name.trim();
+  // Try to get 2 meaningful chars
+  if (name.length >= 2) {
+    // For Thai names, check if it starts with prefix-like
+    const prefixes = ['พี่','ป้า','ลุง','น้อง','คุณ','นาย','นาง'];
+    for (const p of prefixes) {
+      if (name.startsWith(p)) {
+        const rest = name.slice(p.length).trim();
+        if (rest.length >= 1) return rest.slice(0, 2);
+      }
+    }
+    return name.slice(0, 2);
+  }
+  return name;
+}
+function getColor(id) { return COLORS[(id - 1) % COLORS.length]; }
+
+// ===== Data Loading =====
+function getScriptUrl() {
+  return localStorage.getItem(STORAGE_KEY) || '';
+}
+function saveUrl() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) return;
+  localStorage.setItem(STORAGE_KEY, url);
+  document.getElementById('urlBanner').style.display = 'none';
+  syncData();
+}
+function loadDemo() {
+  document.getElementById('urlBanner').style.display = 'none';
+  processData(DEMO_DATA);
+}
+
+function syncData() {
+  const url = getScriptUrl();
+  const btn = document.querySelector('.sync-btn');
+  btn.classList.add('syncing');
+  if (!url) {
+    // Show URL config banner
+    document.getElementById('urlBanner').style.display = 'flex';
+    document.getElementById('empGrid').innerHTML = `<div class="state-msg"><div class="icon">⚙️</div><div>กรุณาตั้งค่า Apps Script URL หรือใช้ Demo</div></div>`;
+    btn.classList.remove('syncing');
+    return;
+  }
+  const cbName = 'cb_' + Date.now();
+  const script = document.createElement('script');
+  script.src = url + '?callback=' + cbName;
+  const timer = setTimeout(() => {
+    script.remove();
+    delete window[cbName];
+    btn.classList.remove('syncing');
+    showError('⏱ Timeout - ไม่สามารถเชื่อมต่อได้');
+  }, 15000);
+  window[cbName] = (data) => {
+    clearTimeout(timer);
+    script.remove();
+    delete window[cbName];
+    btn.classList.remove('syncing');
+    processData(data);
+  };
+  script.onerror = () => {
+    clearTimeout(timer);
+    script.remove();
+    delete window[cbName];
+    btn.classList.remove('syncing');
+    showError('❌ โหลดข้อมูลไม่ได้ ตรวจสอบ URL');
+  };
+  document.body.appendChild(script);
+}
+
+function showError(msg) {
+  document.getElementById('empGrid').innerHTML = `<div class="state-msg"><div class="icon">⚠️</div><div>${msg}</div></div>`;
+}
+
+// Parse raw Google Sheet data OR accept pre-processed
+function processData(raw) {
+  // Accept either raw GAS format or demo format
+  if (raw.employees) {
+    appData = raw;
+  } else {
+    // Parse raw sheet format from Apps Script
+    appData = parseSheetData(raw);
+  }
+  allEmployees = appData.employees;
+  renderHeader();
+  renderGrid(allEmployees);
+}
+
+function parseSheetData(raw) {
+  // raw = { period, days:[...day numbers], rows:[[...], [...], ...] }
+  // Each employee = 2 rows: row1 day values, row2 OT hours
+  // This matches what your Apps Script should return
+  const { period, days, rows, dayRate, otRate } = raw;
+  const employees = [];
+  for (let i = 0; i < rows.length; i += 2) {
+    const r1 = rows[i], r2 = rows[i + 1] || [];
+    if (!r1[1]) continue;
+    employees.push({
+      id: r1[0],
+      name: r1[1],
+      dayRate: r1.dayRate || dayRate || 300,
+      otRate: r1.otRate || otRate || 50,
+      dayWork: days.map((_, di) => r1[di + 2] || 0),
+      otHours: days.map((_, di) => r2[di + 2] || 0),
+    });
+  }
+  return { period, days, employees };
+}
+
+// ===== Rendering =====
+function renderHeader() {
+  document.getElementById('headerPeriod').textContent = appData.period || '—';
+  const emps = appData.employees;
+  let totalPay = 0;
+  emps.forEach(e => {
+    const days = e.dayWork.reduce((s, v) => s + (v || 0), 0);
+    const ot = e.otHours.reduce((s, v) => s + (v || 0), 0);
+    totalPay += days * e.dayRate + ot * e.otRate;
+  });
+  document.getElementById('statEmp').textContent = emps.length + ' คน';
+  document.getElementById('statTotal').textContent = '฿' + totalPay.toLocaleString();
+}
+
+function renderGrid(emps) {
+  const grid = document.getElementById('empGrid');
+  if (!emps.length) {
+    grid.innerHTML = `<div class="state-msg"><div class="icon">🔍</div><div>ไม่พบพนักงาน</div></div>`;
+    return;
+  }
+  grid.innerHTML = emps.map(e => {
+    const days = e.dayWork.reduce((s, v) => s + (v || 0), 0);
+    const ot = e.otHours.reduce((s, v) => s + (v || 0), 0);
+    const initials = getInitials(e.name);
+    const color = getColor(e.id);
+    return `<div class="emp-card" onclick="openSheet(${e.id})">
+      <div class="avatar" style="background:${color}">${initials}</div>
+      <div class="emp-name">${e.name}</div>
+      <div class="emp-badges">
+        <span class="badge badge-day">☀️ ${days}</span>
+        ${ot > 0 ? `<span class="badge badge-ot">⏱ ${ot}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterCards() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const filtered = q ? allEmployees.filter(e => e.name.toLowerCase().includes(q)) : allEmployees;
+  renderGrid(filtered);
+}
+
+// ===== Bottom Sheet =====
+function openSheet(id) {
+  currentEmp = appData.employees.find(e => e.id === id);
+  if (!currentEmp) return;
+  
+  const color = getColor(currentEmp.id);
+  document.getElementById('bsAvatar').textContent = getInitials(currentEmp.name);
+  document.getElementById('bsAvatar').style.background = color;
+  document.getElementById('bsName').textContent = currentEmp.name;
+  document.getElementById('bsPeriod').textContent = appData.period;
+  
+  renderChips();
+  initCalendar();
+  renderLog();
+  renderPay();
+  
+  document.getElementById('bsOverlay').classList.add('open');
+  document.getElementById('bottomSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('bsScroll').scrollTop = 0;
+}
+
+function closeSheet() {
+  document.getElementById('bsOverlay').classList.remove('open');
+  document.getElementById('bottomSheet').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function renderChips() {
+  const e = currentEmp;
+  const days = e.dayWork.reduce((s, v) => s + (v || 0), 0);
+  const ot = e.otHours.reduce((s, v) => s + (v || 0), 0);
+  const pay = days * e.dayRate + ot * e.otRate;
+  document.getElementById('bsChips').innerHTML = `
+    <div class="chip"><div class="chip-icon">☀️</div><div class="chip-val green">${days}</div><div class="chip-label">วัน</div></div>
+    <div class="chip"><div class="chip-icon">⏱</div><div class="chip-val orange">${ot.toFixed(1)}</div><div class="chip-label">ชั่วโมง OT</div></div>
+    <div class="chip"><div class="chip-icon">💰</div><div class="chip-val blue">฿${pay.toLocaleString()}</div><div class="chip-label">รับเงิน</div></div>
+  `;
+}
+
+// ===== Calendar =====
+const MONTH_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const DOW_TH = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+function getDayMap() {
+  // Build a map: "YYYY-MM-DD" -> {work, ot}
+  const map = {};
+  const e = currentEmp;
+  const days = appData.days;
+  // Determine start year/month from period
+  // days array: e.g. [27,28,1,2,3...] where 27,28 = Feb, 1,2... = Mar
+  // We'll infer month changes when day number decreases
+  const now = new Date();
+  // Try to parse period for clues, fallback to current month
+  let yr = now.getFullYear();
+  let mo = now.getMonth(); // 0-indexed
+  
+  // Walk through days
+  let prevDay = -1;
+  let curMo = mo, curYr = yr;
+  // If first day is large (e.g. 27,28), it's probably last month
+  // Heuristic: if first day > 20, start from previous month
+  if (days[0] > 20) { curMo -= 1; if (curMo < 0) { curMo = 11; curYr--; } }
+  
+  for (let i = 0; i < days.length; i++) {
+    const d = days[i];
+    if (d < prevDay) { curMo += 1; if (curMo > 11) { curMo = 0; curYr++; } }
+    prevDay = d;
+    const key = `${curYr}-${String(curMo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    map[key] = { work: e.dayWork[i] || 0, ot: e.otHours[i] || 0 };
+  }
+  return map;
+}
+
+function initCalendar() {
+  // Center on current month
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  renderCalendar();
+}
+
+function changeCalMonth(delta) {
+  const inner = document.getElementById('calInner');
+  const cl = delta < 0 ? 'slide-right' : 'slide-left';
+  inner.classList.add(cl);
+  setTimeout(() => {
+    calMonth += delta;
+    if (calMonth < 0) { calMonth = 11; calYear--; }
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    inner.classList.remove(cl);
+    renderCalendar();
+  }, 200);
+}
+
+function renderCalendar() {
+  document.getElementById('calMonthLabel').textContent = `${MONTH_TH[calMonth]} ${calYear + 543}`;
+  const dow = document.getElementById('calDow');
+  dow.innerHTML = DOW_TH.map(d => `<div class="cal-dow">${d}</div>`).join('');
+  
+  const dayMap = getDayMap();
+  const grid = document.getElementById('calGrid');
+  const first = new Date(calYear, calMonth, 1).getDay();
+  const total = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = new Date();
+  
+  let html = '';
+  for (let i = 0; i < first; i++) html += `<div class="cal-day empty"></div>`;
+  for (let d = 1; d <= total; d++) {
+    const key = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const entry = dayMap[key];
+    const isToday = today.getFullYear()===calYear && today.getMonth()===calMonth && today.getDate()===d;
+    let cls = 'cal-day';
+    if (entry && entry.work > 0) cls += ' worked';
+    if (entry && entry.ot > 0) cls += ' has-ot';
+    if (isToday) cls += ' today-mark';
+    html += `<div class="${cls}">${d}</div>`;
+  }
+  grid.innerHTML = html;
+  
+  // Arrow state - allow 12 months range
+  document.getElementById('calPrev').disabled = (calYear < new Date().getFullYear() - 1);
+  document.getElementById('calNext').disabled = (calYear > new Date().getFullYear() + 1);
+}
+
+// Swipe calendar
+let swipeStartX = 0;
+document.getElementById('calSwipe').addEventListener('touchstart', e => { swipeStartX = e.touches[0].clientX; }, {passive:true});
+document.getElementById('calSwipe').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - swipeStartX;
+  if (Math.abs(dx) > 50) changeCalMonth(dx < 0 ? 1 : -1);
+}, {passive:true});
+
+// ===== Daily Log =====
+function renderLog() {
+  const e = currentEmp;
+  const days = appData.days;
+  const logs = [];
+  let prevDay = -1;
+  let curMo = -1;
+  
+  // Determine months same as getDayMap
+  const now = new Date();
+  let curMoIdx = now.getMonth();
+  let curYr = now.getFullYear();
+  if (days[0] > 20) { curMoIdx -= 1; if (curMoIdx < 0) { curMoIdx = 11; curYr--; } }
+  
+  const monthNames = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  
+  for (let i = 0; i < days.length; i++) {
+    const d = days[i];
+    if (d < prevDay) { curMoIdx += 1; if (curMoIdx > 11) { curMoIdx = 0; curYr++; } }
+    prevDay = d;
+    const work = e.dayWork[i] || 0;
+    const ot = e.otHours[i] || 0;
+    if (work > 0 || ot > 0) {
+      logs.push({ day: d, month: monthNames[curMoIdx], work, ot });
+    }
+  }
+  
+  if (!logs.length) {
+    document.getElementById('logList').innerHTML = `<div style="color:var(--text3);text-align:center;padding:20px">ไม่มีข้อมูล</div>`;
+    return;
+  }
+  
+  document.getElementById('logList').innerHTML = logs.map(l => {
+    let badge = '';
+    if (l.work >= 1) badge = `<span class="log-badge work">✓ เต็มวัน</span>`;
+    else if (l.work > 0) badge = `<span class="log-badge half">½ ครึ่งวัน</span>`;
+    else badge = `<span class="log-badge ot-only">OT</span>`;
+    const otStr = l.ot > 0 ? `<div class="log-ot">⏱ OT ${l.ot} ชั่วโมง</div>` : '';
+    return `<div class="log-item">
+      <div class="log-date">${l.day}</div>
+      <div class="log-info">
+        <div class="log-day-label">${l.month}</div>
+        ${otStr}
+      </div>
+      ${badge}
+    </div>`;
+  }).join('');
+}
+
+// ===== Pay Breakdown =====
+function renderPay() {
+  const e = currentEmp;
+  const days = e.dayWork.reduce((s, v) => s + (v || 0), 0);
+  const otHrs = e.otHours.reduce((s, v) => s + (v || 0), 0);
+  const dayPay = days * e.dayRate;
+  const otPay = otHrs * e.otRate;
+  const total = dayPay + otPay;
+  
+  document.getElementById('payBreakdown').innerHTML = `
+    <div class="pay-box">
+      <div class="pay-row">
+        <div class="pay-label">☀️ ค่าแรงวัน (${days} วัน × ฿${e.dayRate})</div>
+        <div class="pay-val">฿${dayPay.toLocaleString()}</div>
+      </div>
+      <div class="pay-row">
+        <div class="pay-label">⏱ ค่า OT (${otHrs.toFixed(1)} ชม. × ฿${e.otRate})</div>
+        <div class="pay-val" style="color:var(--accent)">฿${otPay.toLocaleString()}</div>
+      </div>
+    </div>
+    <div class="pay-total">
+      <div class="pay-label">💰 รวมรับทั้งหมด</div>
+      <div class="pay-val">฿${total.toLocaleString()}</div>
+    </div>
+  `;
+}
+
+// ===== Swipe down to close sheet =====
+let sheetTouchStartY = 0;
+document.getElementById('bottomSheet').addEventListener('touchstart', e => {
+  sheetTouchStartY = e.touches[0].clientY;
+}, {passive: true});
+document.getElementById('bottomSheet').addEventListener('touchend', e => {
+  const dy = e.changedTouches[0].clientY - sheetTouchStartY;
+  if (dy > 80 && document.getElementById('bsScroll').scrollTop <= 0) closeSheet();
+}, {passive: true});
+
+// ===== Init =====
+window.addEventListener('load', () => {
+  const url = getScriptUrl();
+  if (url) {
+    syncData();
+  } else {
+    document.getElementById('urlBanner').style.display = 'flex';
+    document.getElementById('empGrid').innerHTML = `<div class="state-msg"><div class="icon">👆</div><div>ตั้งค่า URL หรือใช้ Demo ด้านบน</div></div>`;
+    document.querySelector('.sync-btn').classList.remove('syncing');
+  }
+});
+</script>
+</body>
+</html>
