@@ -1,0 +1,23 @@
+{
+  "name": "Employee Attendance",
+  "short_name": "Attendance",
+  "description": "Employee Attendance Tracker",
+  "start_url": "/-/",
+  "scope": "/-/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1C1C1E",
+  "theme_color": "#2C2C2E",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/sawhein/-/main/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/sawhein/-/main/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
