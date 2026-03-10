@@ -779,5 +779,14 @@ window.addEventListener('load', () => {
   }
 });
 </script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/durianfarmemployees/sw.js')
+      .then(reg => console.log('SW registered'))
+      .catch(err => console.log('SW error', err));
+  });
+}
+</script>
 </body>
 </html>
